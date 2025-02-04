@@ -3,6 +3,7 @@
 
 # Generated
 *.sln
+output
 
 # User-specific files
 *.suo

@@ -1,4 +1,4 @@
-<samples>
+<!-- <samples>
   <overlapping name="Chess" N="2" periodic="True"/>
   <overlapping name="Chess" N="2" size="47" periodic="True" screenshots="1"/>
   <overlapping name="Skyline" N="3" symmetry="2" ground="True" periodic="True"/>
@@ -90,4 +90,12 @@
   <simpletiled name="Knots" subset="Standard" size="5" periodic="True" textOutput="True"/>
   <simpletiled name="Summer" size="6" periodic="False" textOutput="True"/>
   <simpletiled name="Circuit" subset="Turnless" size="7" periodic="True" textOutput="True"/>
+</samples> -->
+
+
+<!-- benchmark -->
+<samples>
+  <overlapping name="Office" N="3" size="310" periodic="True" screenshots="1"/>
+
+  <simpletiled name="Circuit" size="250" periodic="True" screenshots="1"/>
 </samples>
