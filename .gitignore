@@ -4,6 +4,7 @@
 # Generated
 *.sln
 output
+.vs
 
 # User-specific files
 *.suo
