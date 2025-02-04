@@ -116,28 +116,36 @@ abstract class Model
             return -1;
         }
 
-        var taskSize = Math.Max(
-            wave.Length / TaskScheduler.Default.MaximumConcurrencyLevel + 1,
-            1000
-        );
+        var waveLength = wave.Length;
+        var taskSize = Math.Max(wave.Length / 8 + 1, 10_000);
+
+        List<(int, int)> intervals = new();
+        for (int taskIndex = 0; taskIndex < (wave.Length / taskSize + 1); taskIndex++) {
+            var start = taskIndex * taskSize;
+            var end = Math.Min(start + taskSize, wave.Length);
+            intervals.Add((start, end));
+        }
+
+        List<Random> randoms = new();
+        for (int taskIndex = 0; taskIndex < (wave.Length / taskSize + 1); taskIndex++) {
+            randoms.Add(new(random.Next()));
+        }
 
         ConcurrentBag<(double, int)> minArgminBug = new();
 
         List<Task> tasks = new();
-        for (int taskIndex = 0; taskIndex < wave.Length; taskIndex += taskSize) {
-            var start = taskIndex * taskSize;
-            var end = Math.Min(start + taskSize, wave.Length);
-            tasks.Add(Task.Factory.StartNew(() => {
+        foreach (var ((start, end), index) in intervals.Select((item, index) => (item, index))) {
+            // tasks.Add(scheduler.StartNew(() => {
                 double min = 1E+4;
                 int argmin = -1;
 
                 for (int i = start; i < end; ++i) {
-                    if (!periodic && (i % MX + N > MX || i / MX + N > MY)) return;
+                    if (!periodic && (i % MX + N > MX || i / MX + N > MY)) continue;
                     int remainingValues = sumsOfOnes[i];
                     double entropy = heuristic == Heuristic.Entropy ? entropies[i] : remainingValues;
                     if (remainingValues > 1 && entropy <= min)
                     {
-                        double noise = 1E-6 * random.NextDouble();
+                        double noise = 1E-6 * randoms[index].NextDouble();
                         if (entropy + noise < min)
                         {
                             min = entropy + noise;
@@ -147,19 +155,19 @@ abstract class Model
                 }
 
                 minArgminBug.Add((min, argmin));
-            }));
+            // }));
         }
 
         Task.WhenAll(tasks).Wait();
 
-        (double min, int argmin) = minArgminBug
+        (double _, int minIndex) = minArgminBug
             .Aggregate(
                 (double.MaxValue, -1),
                 (currentMin, element) => 
                     element.Item1 < currentMin.Item1 ? element : currentMin
             );
 
-        return argmin;
+        return minIndex;
     }
 
     void Observe(int node, Random random)

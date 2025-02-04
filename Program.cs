@@ -12,7 +12,7 @@ static class Program
         var folder = System.IO.Directory.CreateDirectory("output");
         foreach (var file in folder.GetFiles()) file.Delete();
 
-        Random random = Random.Shared;
+        Random random = new(231);
         XDocument xdoc = XDocument.Load("samples.xml");
 
         foreach (XElement xelem in xdoc.Root.Elements("overlapping", "simpletiled"))
