@@ -117,7 +117,7 @@ abstract class Model
         }
 
         var waveLength = wave.Length;
-        var taskSize = Math.Max(wave.Length / 8 + 1, 10_000);
+        var taskSize = 50_000;
 
         List<(int, int)> intervals = new();
         for (int taskIndex = 0; taskIndex < (wave.Length / taskSize + 1); taskIndex++) {
@@ -136,25 +136,7 @@ abstract class Model
         List<Task> tasks = new();
         foreach (var ((start, end), index) in intervals.Select((item, index) => (item, index))) {
             tasks.Add(Task.Factory.StartNew(() => {
-                double min = 1E+4;
-                int argmin = -1;
-
-                for (int i = start; i < end; ++i) {
-                    if (!periodic && (i % MX + N > MX || i / MX + N > MY)) continue;
-                    int remainingValues = sumsOfOnes[i];
-                    double entropy = heuristic == Heuristic.Entropy ? entropies[i] : remainingValues;
-                    if (remainingValues > 1 && entropy <= min)
-                    {
-                        double noise = 1E-6 * randoms[index].NextDouble();
-                        if (entropy + noise < min)
-                        {
-                            min = entropy + noise;
-                            argmin = i;
-                        }
-                    }
-                }
-
-                minArgminBug.Add((min, argmin));
+                minArgminBug.Add(NextUnobservedNodePart(start, end, randoms[index]));
             }));
         }
 
@@ -168,6 +150,28 @@ abstract class Model
             );
 
         return minIndex;
+    }
+
+    (double, int) NextUnobservedNodePart(int start, int end, Random random) {
+        double min = 1E+4;
+        int argmin = -1;
+
+        for (int i = start; i < end; ++i) {
+            if (!periodic && (i % MX + N > MX || i / MX + N > MY)) continue;
+            int remainingValues = sumsOfOnes[i];
+            double entropy = heuristic == Heuristic.Entropy ? entropies[i] : remainingValues;
+            if (remainingValues > 1 && entropy <= min)
+            {
+                double noise = 1E-6 * random.NextDouble();
+                if (entropy + noise < min)
+                {
+                    min = entropy + noise;
+                    argmin = i;
+                }
+            }
+        }
+
+        return (min, argmin);
     }
 
     void Observe(int node, Random random)

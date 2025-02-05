@@ -19,6 +19,10 @@ x64/
 [Bb]in/
 [Oo]bj/
 
+# Tracing
+*.nettrace
+*.chromium.json
+
 # MSTest test Results
 [Tt]est[Rr]esult*/
 [Bb]uild[Ll]og.*
