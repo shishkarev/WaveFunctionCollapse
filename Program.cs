@@ -1,15 +1,19 @@
 ﻿// Copyright (C) 2016 Maxim Gumin, The MIT License (MIT)
 
 using System;
+using System.IO;
 using System.Xml.Linq;
 using System.Diagnostics;
 
 static class Program
 {
+    
     static void Main()
     {
+        Stopwatch Runtime_ = new Stopwatch();
         Stopwatch sw = Stopwatch.StartNew();
         var folder = System.IO.Directory.CreateDirectory("output");
+        string filePath = "timeParallel.txt";
         foreach (var file in folder.GetFiles()) file.Delete();
 
         Random random = new();
@@ -46,24 +50,66 @@ static class Program
                 model = new SimpleTiledModel(name, subset, width, height, periodic, blackBackground, heuristic);
             }
 
-            for (int i = 0; i < xelem.Get("screenshots", 2); i++)
+            int successfulRuns = 0;
+            double totalTime = 0;
+
+            for (int i = 0; i < 15/*xelem.Get("screenshots", 2)*/; i++)
             {
                 for (int k = 0; k < 10; k++)
                 {
                     Console.Write("> ");
                     int seed = random.Next();
+
+                    Stopwatch stopwatch = Stopwatch.StartNew();
                     bool success = model.Run(seed, xelem.Get("limit", -1));
+                    stopwatch.Stop(); 
+
                     if (success)
                     {
-                        Console.WriteLine("DONE");
+                        double elapsedMilliseconds = stopwatch.Elapsed.TotalMilliseconds;
+                        totalTime += elapsedMilliseconds;
+                        successfulRuns++;
+
+                        Console.WriteLine($"DONE ({elapsedMilliseconds:F2} ms)");
+
                         model.Save($"output/{name} {seed}.png");
+
                         if (model is SimpleTiledModel stmodel && xelem.Get("textOutput", false))
                             System.IO.File.WriteAllText($"output/{name} {seed}.txt", stmodel.TextOutput());
+
                         break;
                     }
-                    else Console.WriteLine("CONTRADICTION");
+                    else
+                    {
+                        Console.WriteLine("CONTRADICTION");
+                        stopwatch.Reset();
+                    }
                 }
             }
+
+            if (successfulRuns > 0)
+            {
+                double averageTime = totalTime / successfulRuns;
+                string className = model is SimpleTiledModel ? "Simpletiled" : "Overlapping";
+                Console.WriteLine($"\nСреднее время успешных запусков для {className}: {averageTime:F2} мс");
+            }
+            else
+            {
+                Console.WriteLine("\nНе было успешных запусков.");
+            }
+            /*using (StreamWriter writer = new StreamWriter(filePath, true))
+            {
+                //writer.WriteLine($"name = {name}");
+                //writer.WriteLine($"time stopWatchClear_first3for = {model.stopWatchClear_first3for.Elapsed.TotalMilliseconds * 1000000}");
+                //writer.WriteLine($"time stopWatchClear_secondfor = {model.stopWatchClear_secondfor.Elapsed.TotalMilliseconds * 1000000}");
+                //writer.WriteLine($"time stopWatchPropagate_for_in_for = {model.stopWatchPropagate_for_in_for.Elapsed.TotalMilliseconds * 1000000}");
+                //writer.WriteLine($"time stopWatchNextUnobservedNode_if = {model.stopWatchNextUnobservedNode_if.Elapsed.TotalMilliseconds * 1000000}");
+                //writer.WriteLine($"time = stopWatchNextUnobservedNode_for {model.stopWatchNextUnobservedNode_for.Elapsed.TotalMilliseconds * 1000000}");
+                //writer.WriteLine($"time = stopWatchRun_3for {model.stopWatchRun_3for.Elapsed.TotalMilliseconds * 1000000}");
+                //writer.WriteLine($"time = stopWatchInit_for_in_for {model.stopWatchInit_for_in_for.Elapsed.TotalMilliseconds * 1000000}");
+            }
+
+            Console.WriteLine("Данные записаны в файл: " + filePath);*/
         }
 
         Console.WriteLine($"time = {sw.ElapsedMilliseconds}");

@@ -1,6 +1,9 @@
 ﻿// Copyright (C) 2016 Maxim Gumin, The MIT License (MIT)
 
 using System;
+using System.Diagnostics;
+using System.Threading;
+using System.Threading.Tasks;
 
 abstract class Model
 {
@@ -23,6 +26,17 @@ abstract class Model
     double sumOfWeights, sumOfWeightLogWeights, startingEntropy;
     protected double[] sumsOfWeights, sumsOfWeightLogWeights, entropies;
 
+    public Stopwatch stopWatchClear_first3for = new Stopwatch();
+    public Stopwatch stopWatchClear_secondfor = new Stopwatch();
+    public Stopwatch stopWatchRun_3for = new Stopwatch();
+    public Stopwatch stopWatchNextUnobservedNode_if = new Stopwatch();
+    public Stopwatch stopWatchNextUnobservedNode_for = new Stopwatch();
+    public Stopwatch stopWatchPropagate_for_in_for = new Stopwatch();
+    public Stopwatch stopWatchInit_for_in_for = new Stopwatch();
+    //public Stopwatch Runtime_ = new Stopwatch();
+
+    public int count_Clear__first3for = 0, count_Clear_secondfor = 0, count_Propagate = 0;
+
     public enum Heuristic { Entropy, MRV, Scanline };
     Heuristic heuristic;
 
@@ -39,12 +53,14 @@ abstract class Model
     {
         wave = new bool[MX * MY][];
         compatible = new int[wave.Length][][];
+        stopWatchInit_for_in_for.Start();
         for (int i = 0; i < wave.Length; i++)
         {
             wave[i] = new bool[T];
             compatible[i] = new int[T][];
             for (int t = 0; t < T; t++) compatible[i][t] = new int[4];
         }
+        stopWatchInit_for_in_for.Stop();
         distribution = new double[T];
         observed = new int[MX * MY];
 
@@ -77,9 +93,10 @@ abstract class Model
         Clear();
         Random random = new(seed);
 
+        stopWatchRun_3for.Start();
         for (int l = 0; l < limit || limit < 0; l++)
         {
-            int node = NextUnobservedNode(random);
+            int node = NextUnobservedNode(random, seed);
             if (node >= 0)
             {
                 Observe(node, random);
@@ -92,11 +109,12 @@ abstract class Model
                 return true;
             }
         }
+        stopWatchRun_3for.Stop();
 
         return true;
     }
 
-    int NextUnobservedNode(Random random)
+    /*int NextUnobservedNode(Random random, int seed)
     {
         if (heuristic == Heuristic.Scanline)
         {
@@ -130,10 +148,70 @@ abstract class Model
             }
         }
         return argmin;
+    }*/
+
+    int NextUnobservedNode(Random random, int seed)
+    {
+        if (heuristic == Heuristic.Scanline)
+        {
+            for (int i = observedSoFar; i < wave.Length; i++)
+            {
+                if (!periodic && (i % MX + N > MX || i / MX + N > MY)) continue;
+                if (sumsOfOnes[i] > 1)
+                {
+                    observedSoFar = i + 1;
+                    return i;
+                }
+            }
+            return -1;
+        }
+
+        double min = 1E+4;
+        int argmin = -1;
+        object lockObj = new object();
+
+        ThreadLocal<Random> threadLocalRandom = new ThreadLocal<Random>(() =>
+        {
+            int threadId = Thread.CurrentThread.ManagedThreadId;
+            int threadSeed = unchecked(seed * 397) ^ threadId;
+            return new Random(threadSeed);
+        });
+
+        var options = new ParallelOptions();
+        options.MaxDegreeOfParallelism = 8;
+
+        Parallel.For(0, wave.Length, options, i =>
+        {
+            if (!periodic && (i % MX + N > MX || i / MX + N > MY)) return;
+
+            int remainingValues = sumsOfOnes[i];
+            double entropy = heuristic == Heuristic.Entropy ? entropies[i] : remainingValues;
+
+            if (remainingValues > 1 && entropy <= min)
+            {
+                double noise = 1E-6 * threadLocalRandom.Value.NextDouble();
+                if (entropy + noise < min)
+                {
+                    lock (lockObj)
+                    {
+                        if (entropy + noise < min)
+                        {
+                            min = entropy + noise;
+                            argmin = i;
+                        }
+                    }
+                }
+            }
+        });
+        
+        threadLocalRandom.Dispose();
+
+        return argmin;
     }
 
     void Observe(int node, Random random)
     {
+
         bool[] w = wave[node];
         for (int t = 0; t < T; t++) distribution[t] = w[t] ? weights[t] : 0.0;
         int r = distribution.Random(random.NextDouble());
@@ -142,6 +220,8 @@ abstract class Model
 
     bool Propagate()
     {
+        stopWatchPropagate_for_in_for.Start();
+
         while (stacksize > 0)
         {
             (int i1, int t1) = stack[stacksize - 1];
@@ -174,8 +254,10 @@ abstract class Model
                     if (comp[d] == 0) Ban(i2, t2);
                 }
             }
+            
         }
-
+        stopWatchPropagate_for_in_for.Stop();
+        
         return sumsOfOnes[0] > 0;
     }
 
@@ -198,6 +280,7 @@ abstract class Model
 
     void Clear()
     {
+        stopWatchClear_first3for.Start();
         for (int i = 0; i < wave.Length; i++)
         {
             for (int t = 0; t < T; t++)
@@ -212,15 +295,18 @@ abstract class Model
             entropies[i] = startingEntropy;
             observed[i] = -1;
         }
+        stopWatchClear_first3for.Stop();
         observedSoFar = 0;
 
         if (ground)
         {
+            stopWatchClear_secondfor.Start();
             for (int x = 0; x < MX; x++)
             {
                 for (int t = 0; t < T - 1; t++) Ban(x + (MY - 1) * MX, t);
                 for (int y = 0; y < MY - 1; y++) Ban(x + y * MX, T - 1);
             }
+            stopWatchClear_secondfor.Stop();
             Propagate();
         }
     }
