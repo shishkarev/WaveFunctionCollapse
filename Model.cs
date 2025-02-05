@@ -135,7 +135,7 @@ abstract class Model
 
         List<Task> tasks = new();
         foreach (var ((start, end), index) in intervals.Select((item, index) => (item, index))) {
-            // tasks.Add(scheduler.StartNew(() => {
+            tasks.Add(Task.Factory.StartNew(() => {
                 double min = 1E+4;
                 int argmin = -1;
 
@@ -155,7 +155,7 @@ abstract class Model
                 }
 
                 minArgminBug.Add((min, argmin));
-            // }));
+            }));
         }
 
         Task.WhenAll(tasks).Wait();
