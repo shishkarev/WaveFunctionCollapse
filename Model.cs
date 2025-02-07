@@ -137,7 +137,7 @@ abstract class Model
         object mutex = new();
 
         Parallel.ForEach(
-            Partitioner.Create(0, wave.Length, 1_000),
+            Partitioner.Create(0, wave.Length, 10_000),
             () => {
                 int seed;
                 lock (mutex) {
