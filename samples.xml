@@ -95,7 +95,7 @@
 
 <!-- benchmark -->
 <samples>
-  <overlapping name="Office" N="3" size="310" periodic="True" screenshots="1"/>
+  <overlapping name="Office" N="3" size="210" periodic="True" screenshots="1"/>
 
-  <simpletiled name="Circuit" size="250" periodic="True" screenshots="1"/>
+  <simpletiled name="Circuit" size="190" periodic="True" screenshots="1"/>
 </samples>
