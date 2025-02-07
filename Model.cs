@@ -114,7 +114,7 @@ abstract class Model
         return true;
     }
 
-    /*int NextUnobservedNode(Random random, int seed)
+    int NextUnobservedNode(Random random, int seed)
     {
         if (heuristic == Heuristic.Scanline)
         {
@@ -147,65 +147,6 @@ abstract class Model
                 }
             }
         }
-        return argmin;
-    }*/
-
-    int NextUnobservedNode(Random random, int seed)
-    {
-        if (heuristic == Heuristic.Scanline)
-        {
-            for (int i = observedSoFar; i < wave.Length; i++)
-            {
-                if (!periodic && (i % MX + N > MX || i / MX + N > MY)) continue;
-                if (sumsOfOnes[i] > 1)
-                {
-                    observedSoFar = i + 1;
-                    return i;
-                }
-            }
-            return -1;
-        }
-
-        double min = 1E+4;
-        int argmin = -1;
-        object lockObj = new object();
-
-        ThreadLocal<Random> threadLocalRandom = new ThreadLocal<Random>(() =>
-        {
-            int threadId = Thread.CurrentThread.ManagedThreadId;
-            int threadSeed = unchecked(seed * 397) ^ threadId;
-            return new Random(threadSeed);
-        });
-
-        var options = new ParallelOptions();
-        options.MaxDegreeOfParallelism = 8;
-
-        Parallel.For(0, wave.Length, options, i =>
-        {
-            if (!periodic && (i % MX + N > MX || i / MX + N > MY)) return;
-
-            int remainingValues = sumsOfOnes[i];
-            double entropy = heuristic == Heuristic.Entropy ? entropies[i] : remainingValues;
-
-            if (remainingValues > 1 && entropy <= min)
-            {
-                double noise = 1E-6 * threadLocalRandom.Value.NextDouble();
-                if (entropy + noise < min)
-                {
-                    lock (lockObj)
-                    {
-                        if (entropy + noise < min)
-                        {
-                            min = entropy + noise;
-                            argmin = i;
-                        }
-                    }
-                }
-            }
-        });
-        
-        threadLocalRandom.Dispose();
-
         return argmin;
     }
 

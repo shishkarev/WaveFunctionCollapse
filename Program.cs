@@ -10,10 +10,8 @@ static class Program
     
     static void Main()
     {
-        Stopwatch Runtime_ = new Stopwatch();
         Stopwatch sw = Stopwatch.StartNew();
         var folder = System.IO.Directory.CreateDirectory("output");
-        string filePath = "timeParallel.txt";
         foreach (var file in folder.GetFiles()) file.Delete();
 
         Random random = new();
