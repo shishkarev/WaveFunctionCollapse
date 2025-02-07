@@ -178,7 +178,6 @@ abstract class Model
         });
 
         var options = new ParallelOptions();
-        options.MaxDegreeOfParallelism = 8;
 
         Parallel.For(0, wave.Length, options, i =>
         {
