@@ -1,6 +1,7 @@
 ﻿// Copyright (C) 2016 Maxim Gumin, The MIT License (MIT)
 
 using System;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
@@ -130,24 +131,56 @@ abstract class Model
             return -1;
         }
 
-        double min = 1E+4;
-        int argmin = -1;
-        for (int i = 0; i < wave.Length; i++)
-        {
-            if (!periodic && (i % MX + N > MX || i / MX + N > MY)) continue;
-            int remainingValues = sumsOfOnes[i];
-            double entropy = heuristic == Heuristic.Entropy ? entropies[i] : remainingValues;
-            if (remainingValues > 1 && entropy <= min)
+        double globalMin = 1E+4;
+        int globalArgmin = -1;
+
+        object mutex = new();
+
+        Parallel.ForEach(
+            Partitioner.Create(0, wave.Length),
+            () => {
+                lock (mutex) {
+                    return (1E+4, -1, new Random(random.Next()));
+                }
+            },
+            (range, loop, localState) =>
             {
-                double noise = 1E-6 * random.NextDouble();
-                if (entropy + noise < min)
+                var (min, argmin, random) = localState;
+
+                var (start, end) = range;
+                for (int i = start; i < end; i++)
                 {
-                    min = entropy + noise;
-                    argmin = i;
+                    if (!periodic && (i % MX + N > MX || i / MX + N > MY)) continue;
+                    int remainingValues = sumsOfOnes[i];
+                    double entropy = heuristic == Heuristic.Entropy ? entropies[i] : remainingValues;
+                    if (remainingValues > 1 && entropy <= min)
+                    {
+                        double noise = 1E-6 * random.NextDouble();
+                        if (entropy + noise < min)
+                        {
+                            min = entropy + noise;
+                            argmin = i;
+                        }
+                    }
+                }
+
+                return (min, argmin, random);
+            },
+            (localState) =>
+            {
+                lock (mutex)
+                {
+                    var (localMin, localArgmin, _) = localState;
+                    if (localMin < globalMin)
+                    {
+                        globalMin = localMin;
+                        globalArgmin = localArgmin;
+                    }
                 }
             }
-        }
-        return argmin;
+        );
+
+        return globalArgmin;
     }
 
     void Observe(int node, Random random)
@@ -195,10 +228,10 @@ abstract class Model
                     if (comp[d] == 0) Ban(i2, t2);
                 }
             }
-            
+
         }
         stopWatchPropagate_for_in_for.Stop();
-        
+
         return sumsOfOnes[0] > 0;
     }
 
