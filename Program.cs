@@ -16,7 +16,7 @@ static class Program
         string filePath = "timeParallel.txt";
         foreach (var file in folder.GetFiles()) file.Delete();
 
-        Random random = new();
+        Random random = new(32424);
         XDocument xdoc = XDocument.Load("samples.xml");
 
         foreach (XElement xelem in xdoc.Root.Elements("overlapping", "simpletiled"))
@@ -53,7 +53,7 @@ static class Program
             int successfulRuns = 0;
             double totalTime = 0;
 
-            for (int i = 0; i < 15/*xelem.Get("screenshots", 2)*/; i++)
+            for (int i = 0; i < 5/*xelem.Get("screenshots", 2)*/; i++)
             {
                 for (int k = 0; k < 10; k++)
                 {
