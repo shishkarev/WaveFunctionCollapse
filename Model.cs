@@ -139,9 +139,11 @@ abstract class Model
         Parallel.ForEach(
             Partitioner.Create(0, wave.Length),
             () => {
+                int seed;
                 lock (mutex) {
-                    return (1E+4, -1, new Random(random.Next()));
+                    seed = random.Next();
                 }
+                return (1E+4, -1, new Random());
             },
             (range, loop, localState) =>
             {
@@ -168,9 +170,9 @@ abstract class Model
             },
             (localState) =>
             {
+                var (localMin, localArgmin, _) = localState;
                 lock (mutex)
                 {
-                    var (localMin, localArgmin, _) = localState;
                     if (localMin < globalMin)
                     {
                         globalMin = localMin;
