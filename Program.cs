@@ -51,7 +51,7 @@ static class Program
             int successfulRuns = 0;
             double totalTime = 0;
 
-            for (int i = 0; i < 15/*xelem.Get("screenshots", 2)*/; i++)
+            for (int i = 0; i < 5/*xelem.Get("screenshots", 2)*/; i++)
             {
                 for (int k = 0; k < 10; k++)
                 {
